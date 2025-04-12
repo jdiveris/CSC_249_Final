@@ -3,21 +3,22 @@ from library_simulator.queues.list_queue import ListQueue
 class MockLibraryDb:
     """
     Represents an in-memory mock database for use in simulation.
-    Stores all relevant library state: books, cardholders, return queue, and reserved holds.
+    Stores all relevant library state: books, library_cards, return queue, and reserved holds.
     """
 
-    def __init__(self, book_catalogue, cardholder_dict):
+    def __init__(self, book_catalogue, library_card_dict):
         """
-        Initializes the mock database with pre-seeded books and cardholders.
+        Initializes the mock database with pre-seeded books and library_cards.
 
         Args:
             book_catalogue (dict): A dictionary mapping ISBNs to Book objects.
-            cardholder_dict (dict): A dictionary mapping card numbers to Cardholder objects.
+            library_card_dict (dict): A dictionary mapping card numbers to LibraryCard objects.
         """
         self.book_catalogue = book_catalogue
-        self.cardholder_dict = cardholder_dict
+        self.library_card_dict = library_card_dict
         self.returns_queue = ListQueue()
         self.reserved_holds = {} # Key: card_number, Value: List[Hold]
+        self.active_cards = set() # Used to increment loan hold/timers
 
     def lookup_book(self, isbn):
         """
@@ -36,5 +37,5 @@ class MockLibraryDb:
         #  if not found: handle error
         return self.book_catalogue[isbn]
 
-    def lookup_cardholder(self, card_number):
-        return self.cardholder_dict[card_number]
+    def lookup_library_card(self, card_number):
+        return self.library_card_dict[card_number]

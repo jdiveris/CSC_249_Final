@@ -17,7 +17,6 @@ class ListQueue:
             for item in sourcecollection:
                 self.enqueue(item)
 
-
     def __len__(self):
         """
         Returns the number of items currently in the queue.
@@ -27,6 +26,9 @@ class ListQueue:
         """
         return len(self.items)
 
+    def __iter__(self):
+        for item in self.items:
+            yield item
 
     def is_empty(self):
         """
@@ -37,7 +39,6 @@ class ListQueue:
         """
         return len(self) == 0
 
-
     def enqueue(self, item):
         """
         Adds an item to the rear of the queue.
@@ -46,7 +47,6 @@ class ListQueue:
             item: The item to be enqueued.
         """
         self.items.append(item)
-
 
     def dequeue(self):
         """
@@ -66,7 +66,6 @@ class ListQueue:
 
         return item
 
-
     def peek(self):
         """
         Returns the item at the front of the queue without removing it.
@@ -81,3 +80,30 @@ class ListQueue:
             raise IndexError("The Queue is empty.")
 
         return self.items[0]
+
+    def contains(self, target):
+        """
+        Checks if the target item exists in the queue.
+
+        Args:
+            target: The item to search for.
+
+        Returns:
+            bool: True if the item is in the queue, False otherwise.
+        """
+        return target in self.items
+
+    def remove(self, target):
+        """
+        Removes the first occurrence of the specified item from the queue.
+
+        Args:
+            item: The item to remove from the queue.
+
+        Raises:
+            ValueError: If the item is not found in the queue.
+        """
+        if not target in self.items:
+            raise ValueError("Item not in queue")
+
+        self.items.remove(target)

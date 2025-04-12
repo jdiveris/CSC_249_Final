@@ -1,5 +1,5 @@
 from library_simulator.models.book import Book
-from library_simulator.models.card_holder import Cardholder
+from library_simulator.models.library_card import LibraryCard
 
 
 def seed_books():
@@ -53,32 +53,32 @@ def seed_books():
     }
 
 
-def seed_cardholders():
+def seed_library_cards():
     """
-    Creates a dictionary of 20 mock Cardholder objects.
+    Creates a dictionary of 20 mock LibraryCard objects.
 
     Returns:
-        dict: A dictionary mapping cardholder IDs to Cardholder objects.
+        dict: A dictionary mapping LibraryCard IDs to LibraryCard objects.
     """
     return {
-        "card001": Cardholder("card001"),
-        "card002": Cardholder("card002"),
-        "card003": Cardholder("card003"),
-        "card004": Cardholder("card004"),
-        "card005": Cardholder("card005"),
-        "card006": Cardholder("card006"),
-        "card007": Cardholder("card007"),
-        "card008": Cardholder("card008"),
-        "card009": Cardholder("card009"),
-        "card010": Cardholder("card010"),
-        "card011": Cardholder("card011"),
-        "card012": Cardholder("card012"),
-        "card013": Cardholder("card013"),
-        "card014": Cardholder("card014"),
-        "card015": Cardholder("card015"),
-        "card016": Cardholder("card016"),
-        "card017": Cardholder("card017"),
-        "card018": Cardholder("card018"),
-        "card019": Cardholder("card019"),
-        "card020": Cardholder("card020"),
+        "card001": LibraryCard("card001"),
+        "card002": LibraryCard("card002"),
+        "card003": LibraryCard("card003"),
+        "card004": LibraryCard("card004"),
+        "card005": LibraryCard("card005"),
+        "card006": LibraryCard("card006"),
+        "card007": LibraryCard("card007"),
+        "card008": LibraryCard("card008"),
+        "card009": LibraryCard("card009"),
+        "card010": LibraryCard("card010"),
+        "card011": LibraryCard("card011"),
+        "card012": LibraryCard("card012"),
+        "card013": LibraryCard("card013"),
+        "card014": LibraryCard("card014"),
+        "card015": LibraryCard("card015"),
+        "card016": LibraryCard("card016"),
+        "card017": LibraryCard("card017"),
+        "card018": LibraryCard("card018"),
+        "card019": LibraryCard("card019"),
+        "card020": LibraryCard("card020"),
     }

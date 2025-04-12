@@ -1,18 +1,18 @@
 class PickupRequest:
     """
-    Represents a request by a cardholder to pick up one or more available holds.
+    Represents a request by a library_card to pick up one or more available holds.
     Each hold in the list must be processed individually.
     """
 
-    def __init__(self, cardholder, holds_to_pickup):
+    def __init__(self, library_card, holds_to_pickup):
         """
-        Initializes a new PickupRequest with the cardholder and a list of available holds.
+        Initializes a new PickupRequest with the library_card and a list of available holds.
 
         Args:
-            cardholder (Cardholder): The patron picking up their reserved holds.
+            library_card (LibraryCard): The patron picking up their reserved holds.
             holds_to_pickup (List[Hold]): A list of Hold objects available for pickup.
         """
-        self.cardholder = cardholder
+        self.library_card = library_card
         self.holds_to_pickup = holds_to_pickup
         # Set a size attribute equal to the length of holds_to_pickup
         self.remaining_pickups = len(holds_to_pickup)

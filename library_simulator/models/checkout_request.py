@@ -1,18 +1,18 @@
 class CheckoutRequest:
     """
-    Represents a checkout job initiated by a cardholder.
+    Represents a checkout job initiated by a library_card.
     Each request includes a list of books to check out and tracks how many remain to be processed.
     """
 
-    def __init__(self, cardholder, book_list):
+    def __init__(self, library_card, book_list):
         """
         Initializes a new checkout request.
 
         Args:
-            cardholder (Cardholder): The user attempting to check out books.
+            library_card (LibraryCard): The user attempting to check out books.
             book_list (List[Book]): A list of Book objects to be checked out.
         """
-        self.cardholder = cardholder
+        self.library_card = library_card
         self.book_list = book_list
         # Set a size attribute equal to the length of book_list
         self.remaining_books = len(book_list)

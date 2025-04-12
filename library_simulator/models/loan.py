@@ -7,6 +7,5 @@ class Loan:
     def decrement_loan_period(self):
         self.loan_period -= 1
 
-    def loan_elapsed(self):
-        # TODO: Prompt cardholder class to initiate return
-        pass
+    def is_elapsed(self):
+        return self.loan_period <= 0

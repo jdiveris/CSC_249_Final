@@ -8,6 +8,5 @@ class Hold:
     def decrement_time_to_claim(self):
         self.time_to_claim -= 1
 
-    def time_to_claim_elapsed(self):
-        # TODO: Implement code to delete hold once time has elapsed
-        pass
+    def has_expired(self):
+        return self.time_to_claim <= 0

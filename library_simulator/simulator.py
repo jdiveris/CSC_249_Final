@@ -3,7 +3,7 @@ import random
 from controller.library_controller import LibraryController
 from database.mock_library_db import MockLibraryDb
 from queues.list_queue import ListQueue
-from seed_data.seeder import seed_books, seed_cardholders
+from seed_data.seeder import seed_books, seed_library_cards
 from utils.clock import Clock
 from models.checkout_request import CheckoutRequest
 from models.pickup_request import PickupRequest
@@ -12,14 +12,14 @@ from models.pickup_request import PickupRequest
 class Simulator:
     """
     Manages the progression of simulated library activity over a series of time-based ticks.
-    Orchestrates cardholder arrivals, checkout jobs, pickup requests, and return processing.
+    Orchestrates library_card arrivals, checkout jobs, pickup requests, and return processing.
     """
 
     def __init__(self):
         """
         Initializes the simulation environment, seeding data and setting up time and queues.
         """
-        self.db = MockLibraryDb(seed_books(), seed_cardholders())
+        self.db = MockLibraryDb(seed_books(), seed_library_cards())
         self.librarian = LibraryController()
         self.clock = Clock(hours_per_day=12)
         self.checkout_queue = ListQueue()
@@ -36,7 +36,7 @@ class Simulator:
         """
         # Calculate total number of hours in simulation run time
         # Simulation will loop each hour
-        total_ticks = days * self.clock.hours_per_day
+        # total_ticks = days * self.clock.hours_per_day
 
         for _ in range(days):
             for _ in range(self.clock.hours_per_day):
@@ -62,7 +62,22 @@ class Simulator:
                     # Process the current working_request
                     self.process_working_request()
 
-            # TODO: Decrement running holds & loans
+            # Loop through the days active cards
+            for card in self.db.active_cards:
+                # Loop through the active loans on those cards
+                for loan in card.loan_queue:
+                    # Decrement the loan periods by 1 day
+                    loan.decrement_loan_period()
+                    # If loan period is over, return book
+                    if loan.is_elapsed():
+                        self.librarian.return_book(card, self.db)
+
+                if card.card_number in self.db.reserved_holds:
+                    for hold in self.db.reserved_holds[card.card_number]:
+                        hold.decrement_time_to_claim()
+                        if hold.has_expired():
+                            self.librarian.remove_hold(hold, self.db)
+
 
     def process_working_request(self):
         """
@@ -73,7 +88,7 @@ class Simulator:
             # Get a book from the current request,
             book = self.working_request.scan_book()
             # Checkout or place hold for this book
-            self.librarian.checkout_book(self.working_request.cardholder, book)
+            self.librarian.checkout_book(self.working_request.library_card, book)
 
         if isinstance(self.working_request, PickupRequest):
             # Get hold associated with this
@@ -108,16 +123,18 @@ class Simulator:
     def simulate_arrivals(self, n):
         """
         Simulates the arrival of n patrons, creating either a checkout request
-        or a pickup request based on whether the cardholder has available holds.
+        or a pickup request based on whether the library_card has available holds.
 
         Args:
             n (int): The number of patrons arriving this tick.
         """
-        # Get a random list of unique cardholder objects from the database
-        patrons = random.sample(list(self.db.cardholder_dict.values()), n)
+        # Get a random list of unique library_card objects from the database
+        patrons = random.sample(list(self.db.library_card_dict.values()), n)
 
         # Loop through list of patrons
         for patron in patrons:
+            # Track that patron's card is active
+            self.db.active_cards.add(patron)
             # If patron has reserved holds available for pickup
             if patron.card_number in self.db.reserved_holds:
                 # Get list of holds

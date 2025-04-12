@@ -8,56 +8,98 @@ class LibraryController:
     processing returns, and updating availability and hold queues.
     """
 
-    def checkout_book(self, cardholder, book):
+    def checkout_book(self, library_card, book):
         """
-        Attempts to check out a book for the given cardholder.
-        If the book is available, it is loaned and recorded in the cardholder's loan queue.
+        Attempts to check out a book for the given library_card.
+        If the book is available, it is loaned and recorded in the library_card's loan queue.
         If unavailable, a hold is placed on the book instead.
 
         Args:
-            cardholder (Cardholder): The user attempting to check out a book.
+            library_card (LibraryCard): The user attempting to check out a book.
             book (Book): The book being requested.
         """
         if book.is_available():
             # If book is available, reduce available quantity and create a loan
-            # Add that loan to the cardholder's loan_queue
+            # Add that loan to the library_card's loan_queue
             book.available_copies -= 1
-            cardholder.loan_queue.enqueue(Loan(cardholder.card_number, book.isbn))
+            library_card.loan_queue.enqueue(Loan(library_card.card_number, book.isbn))
         else:
-            # If book is not available place a hold for this cardholder
-            self.place_hold(book, cardholder)
+            # If book is not available place a hold for this library_card
+            self.place_hold(book, library_card)
 
     def pickup_book(self, hold, mock_database):
+        """
+        Checks out a book from a hold.
+        Looks up the book object from the isbn in the hold, makes a copy
+        available for pickup, then checks it out using the card number from hold.
+
+        Args:
+            hold (Hold): The hold for the book to be picked up.
+            mock_database (MockLibraryDB): The mocked database containing book and
+                library_card info.
+
+        """
         # Get book that hold is referring to via hold info
         book = mock_database.lookup_book(hold.isbn)
         # Increase available copies of the book (so one can be checked out)
         book.available_copies += 1
 
-        # Checkout book (Lookup cardholder via hold info)
-        self.checkout_book(mock_database.lookup_cardholder(hold.card_number), book)
+        # Checkout book (Lookup library_card via hold info)
+        self.checkout_book(mock_database.lookup_library_card(hold.card_number), book)
+        self.hold_checked_out(hold, mock_database.reserved_holds)
 
-    def place_hold(self, book, cardholder):
+    def place_hold(self, book, library_card):
         """
-        Places a hold on a book for a specific cardholder.
+        Places a hold on a book for a specific library_card.
 
         Args:
             book (Book): The book to place a hold on.
-            cardholder (Cardholder): The user placing the hold.
+            library_card (LibraryCard): The user placing the hold.
         """
         # Create a hold obj and enqueue it in the book's hold_queue
-        book.hold_queue.enque(Hold(book.isbn, cardholder.card_number))
+        book.hold_queue.enque(Hold(book.isbn, library_card.card_number))
 
-    def return_book(self, cardholder, mock_database):
+    def hold_checked_out(self, hold, reserved_holds):
         """
-        Initiates a book return by dequeuing the next book from the cardholder's loan queue
+        Removes a hold from the reserved holds collection after it has been checked out.
+        If the cardholder has no remaining holds, their entry is removed from the dictionary.
+
+        Args:
+            hold (Hold): The hold object that was picked up.
+            reserved_holds (dict): A dictionary mapping card numbers to lists of Hold objects.
+        """
+        # Remove hold from reserved list
+        reserved_holds[hold.card_number].remove(hold)
+        # If there are no more reserved holds, remove the card number from reserved_holds
+        if not reserved_holds[hold.card_number]:
+            del reserved_holds[hold.card_number]
+
+    def remove_hold(self, hold, mock_database):
+        """
+        Removes a hold from both the book's hold queue and the cardholder's reserved holds list.
+
+        Args:
+            hold (Hold): The hold object to be removed.
+            mock_database (MockLibraryDb): The mock database containing book and hold records.
+        """
+        # Lookup the book associated with the hold
+        book = mock_database.lookup_book(hold.isbn)
+        # Remove the hold from the book's hold queue
+        book.hold_queue.remove(hold)
+        # Remove the hold from the reserved_holds list
+        mock_database.reserved_holds[hold.card_number].remove(hold)
+
+    def return_book(self, library_card, mock_database):
+        """
+        Initiates a book return by dequeuing the next book from the library_card's loan queue
         and adding it to the library's return queue.
 
         Args:
-            cardholder (Cardholder): The user returning a book.
+            library_card (LibraryCard): The user returning a book.
             mock_database (MockLibraryDb): The mock database containing the return queue.
         """
-        # Fetch the oldest book checked out by cardholder
-        book = cardholder.loan_queue.dequeue()
+        # Fetch the oldest book checked out by library_card
+        book = library_card.loan_queue.dequeue()
         # Add the book to the library's return_queue
         mock_database.return_queue.enque(book)
 
@@ -82,10 +124,10 @@ class LibraryController:
             # Get card number associated with hold
             card_number = first_hold.card_number
             # Add hold to reserved books list in database
-            if card_number not in mock_database.reserved_books:
-                mock_database.reserved_books[card_number] = [first_hold,]
+            if card_number not in mock_database.reserved_holds:
+                mock_database.reserved_holds[card_number] = [first_hold,]
             else:
-                mock_database.reserved_books[card_number].append(first_hold)
+                mock_database.reserved_holds[card_number].append(first_hold)
         else: # If book has no holds
             # Increase the available copies for rental
             book.available_copies += 1

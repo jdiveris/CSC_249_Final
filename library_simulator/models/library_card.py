@@ -1,7 +1,7 @@
 from library_simulator.queues.list_queue import ListQueue
 
 
-class Cardholder:
+class LibraryCard:
     def __init__(self, card_number):
         self.card_number = card_number
         self.loan_queue = ListQueue()
