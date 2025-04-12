@@ -6,11 +6,11 @@ class LibraryCard:
         self.card_number = card_number
         self.loan_queue = ListQueue()
 
+    def __repr__(self):
+        return f"<LibraryCard #{self.card_number}, loans={len(self.loan_queue)}>"
 
-    # def finish_book(self):
-    #     # TODO: Implement function to initiate book return
-    #     pass
-    #
-    # def get_a_book(self):
-    #     # TODO: Implement function to initiate book checkout
-    #     pass
+    def __str__(self):
+        return (
+            f"[Card] ID: {self.card_number}, "
+            f"Active Loans: {len(self.loan_queue)}"
+        )

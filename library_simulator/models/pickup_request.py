@@ -13,7 +13,7 @@ class PickupRequest:
             holds_to_pickup (List[Hold]): A list of Hold objects available for pickup.
         """
         self.library_card = library_card
-        self.holds_to_pickup = holds_to_pickup
+        self.holds_to_pickup = list(holds_to_pickup)
         # Set a size attribute equal to the length of holds_to_pickup
         self.remaining_pickups = len(holds_to_pickup)
 
@@ -37,8 +37,8 @@ class PickupRequest:
             IndexError: If there are no remaining holds to fetch.
         """
         # If there are no holds to fetch, raise error
-        if self.holds_to_pickup <= 0:
-            raise IndexError("There are no available holds.")
+        if self.is_complete():
+            raise IndexError("There are no available holds")
 
         # Get hold from the holds list (removing it)
         hold = self.holds_to_pickup.pop()

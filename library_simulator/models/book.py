@@ -49,3 +49,14 @@ class Book:
             bool: True if the hold queue is not empty; False otherwise.
         """
         return not self.hold_queue.is_empty()
+
+    def __repr__(self):
+        return f"<Book title='{self.title}', isbn='{self.isbn}', available={self.available_copies}/{self.total_copies}>"
+
+
+    def __str__(self):
+        return (
+            f"[Book] Title: '{self.title}', ISBN: {self.isbn}, "
+            f"Author: {self.author}, Available: {self.available_copies}/{self.total_copies}, "
+            f"Holds: {len(self.hold_queue)}"
+        )

@@ -65,7 +65,7 @@ class Simulator:
                     self.process_working_request()
 
             # Loop through the days active cards
-            for card in self.db.active_cards:
+            for card in list(self.db.active_cards):
                 # Loop through the active loans on those cards
                 for loan in card.loan_queue:
                     # Decrement the loan periods by 1 day
@@ -79,7 +79,7 @@ class Simulator:
                 if card.card_number in self.db.reserved_holds:
                     for hold in self.db.reserved_holds[card.card_number]:
                         hold.decrement_time_to_claim()
-                        if hold.has_expired():
+                        if hold.has_expired() and not hold.fulfilled:
                             self.librarian.remove_hold(hold, self.db)
                             # Log hold expiration
                             self.logger.log_event(
@@ -94,11 +94,17 @@ class Simulator:
             self.logger.log_day_summary(self.clock.current_day)
 
 
+
     def process_working_request(self):
         """
         Processes the current active request, whether it's a checkout or a pickup.
         If the request is completed, it clears the working slot for the next request.
         """
+        if self.working_request.is_complete():
+            # If the current request is completed, clear the working_request
+            self.working_request = None
+            return # End process here
+
         if isinstance(self.working_request, CheckoutRequest):
             # Get a book from the current request,
             book = self.working_request.scan_book()
@@ -116,6 +122,9 @@ class Simulator:
             # Get hold associated with this
             hold = self.working_request.fetch_hold()
             # Pickup this hold
+            self.logger.log_event(f"{self.working_request.library_card.card_number} "
+                                  f"picking up {hold}")
+            print(self.db.reserved_holds)
             self.librarian.pickup_book(hold, self.db)
             # Log hold picked up
             self.logger.log_event(f"{self.working_request.library_card.card_number} "
@@ -160,7 +169,8 @@ class Simulator:
             # Track that patron's card is active
             self.db.active_cards.add(patron)
             # If patron has reserved holds available for pickup
-            if patron.card_number in self.db.reserved_holds:
+            if patron.card_number in self.db.reserved_holds and \
+                    len(self.db.reserved_holds[patron.card_number]) > 0:
                 # Get list of holds
                 holds_to_pickup = self.db.reserved_holds[patron.card_number]
                 pickup_request = PickupRequest(patron, holds_to_pickup)

@@ -1,2 +1,11 @@
 *.zip
 .idea/
+# Ignore Python cache and bytecode
+__pycache__/
+*.py[cod]
+
+# Ignore bytecode in subfolders (redundant but safe)
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd

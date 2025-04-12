@@ -59,19 +59,19 @@ class LibraryController:
             library_card (LibraryCard): The user placing the hold.
         """
         # Create a hold obj and enqueue it in the book's hold_queue
-        book.hold_queue.enque(Hold(book.isbn, library_card.card_number))
+        book.hold_queue.enqueue(Hold(book.isbn, library_card.card_number))
         return "HOLD"
 
     def hold_checked_out(self, hold, reserved_holds):
         """
-        Removes a hold from the reserved holds collection after it has been checked out.
-        If the cardholder has no remaining holds, their entry is removed from the dictionary.
+        Cleanup method to mark hold as fulfilled and to remove items from the
+        reserved_holds dictionary in the database if a given card has no more reserved holds
 
         Args:
-            hold (Hold): The hold object that was picked up.
+            hold: (Hold) Hold obj that was just picked up
             reserved_holds (dict): A dictionary mapping card numbers to lists of Hold objects.
         """
-        # Remove hold from reserved list
+        hold.fulfilled = True
         reserved_holds[hold.card_number].remove(hold)
         # If there are no more reserved holds, remove the card number from reserved_holds
         if not reserved_holds[hold.card_number]:
@@ -85,10 +85,10 @@ class LibraryController:
             hold (Hold): The hold object to be removed.
             mock_database (MockLibraryDb): The mock database containing book and hold records.
         """
-        # Lookup the book associated with the hold
-        book = mock_database.lookup_book(hold.isbn)
-        # Remove the hold from the book's hold queue
-        book.hold_queue.remove(hold)
+        # # Lookup the book associated with the hold
+        # book = mock_database.lookup_book(hold.isbn)
+        # # Remove the hold from the book's hold queue
+        # book.hold_queue.remove(hold)
         # Remove the hold from the reserved_holds list
         mock_database.reserved_holds[hold.card_number].remove(hold)
 
@@ -101,10 +101,12 @@ class LibraryController:
             library_card (LibraryCard): The user returning a book.
             mock_database (MockLibraryDb): The mock database containing the return queue.
         """
-        # Fetch the oldest book checked out by library_card
-        book = library_card.loan_queue.dequeue()
-        # Add the book to the library's return_queue
-        mock_database.return_queue.enque(book)
+        # Fetch the loan book checked out by library_card
+        loan = library_card.loan_queue.dequeue()
+        # Lookup book associated with the loan
+        book = mock_database.lookup_book(loan.isbn)
+        # Add the book to the library's returns_queue
+        mock_database.returns_queue.enqueue(book)
 
     def process_return(self, mock_database):
         """
@@ -115,11 +117,11 @@ class LibraryController:
             mock_database (MockLibraryDb): The mock database containing books and queues.
         """
         # Fetch the oldest return
-        book = mock_database.return_queue.dequeue()
+        book = mock_database.returns_queue.dequeue()
 
         if book.has_holds():
-            # Access the first hold on this book without removing
-            first_hold = book.hold_queue.peek()
+            # Access the first hold on this book
+            first_hold = book.hold_queue.dequeue()
             # Set time to claim hold to 1 week
             first_hold.time_to_claim = 7
             # Mark hold as available

@@ -98,7 +98,7 @@ class ListQueue:
         Removes the first occurrence of the specified item from the queue.
 
         Args:
-            item: The item to remove from the queue.
+            target: The item to remove from the queue.
 
         Raises:
             ValueError: If the item is not found in the queue.
