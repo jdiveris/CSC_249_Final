@@ -1,0 +1,12 @@
+class Loan:
+    def __init__(self, card_number, isbn):
+        self.card_number = card_number
+        self.isbn = isbn
+        self.loan_period = 14
+
+    def decrement_loan_period(self):
+        self.loan_period -= 1
+
+    def loan_elapsed(self):
+        # TODO: Prompt cardholder class to initiate return
+        pass
