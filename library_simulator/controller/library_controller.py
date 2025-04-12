@@ -23,9 +23,11 @@ class LibraryController:
             # Add that loan to the library_card's loan_queue
             book.available_copies -= 1
             library_card.loan_queue.enqueue(Loan(library_card.card_number, book.isbn))
+            return "CHECKOUT"
         else:
             # If book is not available place a hold for this library_card
-            self.place_hold(book, library_card)
+            return self.place_hold(book, library_card)
+
 
     def pickup_book(self, hold, mock_database):
         """
@@ -58,6 +60,7 @@ class LibraryController:
         """
         # Create a hold obj and enqueue it in the book's hold_queue
         book.hold_queue.enque(Hold(book.isbn, library_card.card_number))
+        return "HOLD"
 
     def hold_checked_out(self, hold, reserved_holds):
         """

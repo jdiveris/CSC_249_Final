@@ -5,6 +5,7 @@ from database.mock_library_db import MockLibraryDb
 from queues.list_queue import ListQueue
 from seed_data.seeder import seed_books, seed_library_cards
 from utils.clock import Clock
+from utils.log_report import LogReport
 from models.checkout_request import CheckoutRequest
 from models.pickup_request import PickupRequest
 
@@ -22,6 +23,7 @@ class Simulator:
         self.db = MockLibraryDb(seed_books(), seed_library_cards())
         self.librarian = LibraryController()
         self.clock = Clock(hours_per_day=12)
+        self.logger = LogReport()
         self.checkout_queue = ListQueue()
         self.working_request = None
 
@@ -71,12 +73,25 @@ class Simulator:
                     # If loan period is over, return book
                     if loan.is_elapsed():
                         self.librarian.return_book(card, self.db)
-
+                        # Log return
+                        self.logger.log_event(f"{card.card_number} returned a book")
+                # If card has reserved holds
                 if card.card_number in self.db.reserved_holds:
                     for hold in self.db.reserved_holds[card.card_number]:
                         hold.decrement_time_to_claim()
                         if hold.has_expired():
                             self.librarian.remove_hold(hold, self.db)
+                            # Log hold expiration
+                            self.logger.log_event(
+                                f"Hold for {card.card_number} on book {hold.isbn} expired and was removed"
+                            )
+                # Remove card from active cards if it has no loans or reserved holds
+                if card.loan_queue.is_empty() and \
+                    card.card_number not in self.db.reserved_holds:
+                    self.db.active_cards.remove(card)
+
+            # Log days events
+            self.logger.log_day_summary(self.clock.current_day)
 
 
     def process_working_request(self):
@@ -88,14 +103,23 @@ class Simulator:
             # Get a book from the current request,
             book = self.working_request.scan_book()
             # Checkout or place hold for this book
-            self.librarian.checkout_book(self.working_request.library_card, book)
+            status = self.librarian.checkout_book(self.working_request.library_card, book)
+            if status is "CHECKOUT": # If successful checkout
+                # Log checkout
+                self.logger.log_event(f"{self.working_request.library_card.card_number}"
+                                      f" checked out {book.title}")
+            elif status is "HOLD": # If hold was placed
+                self.logger.log_event(f"{self.working_request.library_card.card_number}"
+                                      f" placed a hold for {book.title}")
 
         if isinstance(self.working_request, PickupRequest):
             # Get hold associated with this
             hold = self.working_request.fetch_hold()
             # Pickup this hold
             self.librarian.pickup_book(hold, self.db)
-
+            # Log hold picked up
+            self.logger.log_event(f"{self.working_request.library_card.card_number} "
+                                  f"picked up {self.db.lookup_book(hold.isbn).title}")
 
         if self.working_request.is_complete():
             # If the current request is completed, clear the working_request
