@@ -14,8 +14,6 @@ class PickupRequest:
         """
         self.library_card = library_card
         self.holds_to_pickup = list(holds_to_pickup)
-        # Set a size attribute equal to the length of holds_to_pickup
-        self.remaining_pickups = len(holds_to_pickup)
 
     def is_complete(self):
         """
@@ -24,7 +22,7 @@ class PickupRequest:
         Returns:
             bool: True if no holds remain; False otherwise.
         """
-        return self.remaining_pickups <= 0
+        return len(self.holds_to_pickup) <= 0
 
     def fetch_hold(self):
         """
@@ -42,8 +40,6 @@ class PickupRequest:
 
         # Get hold from the holds list (removing it)
         hold = self.holds_to_pickup.pop()
-        # Update remaining pickup quantity
-        self.remaining_pickups = len(self.holds_to_pickup)
 
         # Return the fetched hold
         return hold

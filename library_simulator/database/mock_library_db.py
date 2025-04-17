@@ -29,12 +29,7 @@ class MockLibraryDb:
 
         Returns:
             Book: The matching Book object.
-
-        Raises:
-            KeyError: If the ISBN does not exist in the catalogue.
         """
-        # TODO:
-        #  if not found: handle error
         return self.book_catalogue[isbn]
 
     def lookup_library_card(self, card_number):

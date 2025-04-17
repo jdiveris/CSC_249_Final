@@ -24,14 +24,6 @@ class Book:
         self.available_copies = total_copies
         self.hold_queue = ListQueue()
 
-    def __str__(self):
-        """
-        Returns a formatted string representation of the book.
-
-        """
-        # TODO: Create a proper str representation
-        pass
-
     def is_available(self):
         """
         Checks whether there are any available copies of the book.
@@ -50,11 +42,11 @@ class Book:
         """
         return not self.hold_queue.is_empty()
 
-    def __repr__(self):
-        return f"<Book title='{self.title}', isbn='{self.isbn}', available={self.available_copies}/{self.total_copies}>"
-
-
     def __str__(self):
+        """
+        Returns a formatted string representation of the book.
+
+        """
         return (
             f"[Book] Title: '{self.title}', ISBN: {self.isbn}, "
             f"Author: {self.author}, Available: {self.available_copies}/{self.total_copies}, "

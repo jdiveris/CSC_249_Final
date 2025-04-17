@@ -36,12 +36,12 @@ class Simulator:
         Args:
             days (int): The number of simulated days to run. Default is 30.
         """
-        # Calculate total number of hours in simulation run time
-        # Simulation will loop each hour
-        # total_ticks = days * self.clock.hours_per_day
-
-        for _ in range(days):
-            for _ in range(self.clock.hours_per_day):
+        # Simulation will loop each hour and each day
+        self.logger.log_event("=== SIMULATION START ===\n"
+                              "===============================\n")
+        for _ in range(days):  # Loop for days
+            self.logger.log_event("Day started")
+            for _ in range(self.clock.hours_per_day):  # Loop for hours
                 # Increase the hours on the clock
                 self.clock.tick()
 
@@ -72,66 +72,81 @@ class Simulator:
                     loan.decrement_loan_period()
                     # If loan period is over, return book
                     if loan.is_elapsed():
-                        self.librarian.return_book(card, self.db)
+                        # Return book and save book title
+                        book_title = self.librarian.return_book(card, self.db)
                         # Log return
-                        self.logger.log_event(f"{card.card_number} returned a book")
+                        self.logger.log_return(card.card_number, book_title)
+
                 # If card has reserved holds
                 if card.card_number in self.db.reserved_holds:
+                    # Loop through holds
                     for hold in self.db.reserved_holds[card.card_number]:
+                        # Decrement hold time
                         hold.decrement_time_to_claim()
-                        if hold.has_expired() and not hold.fulfilled:
+                        # If hold is expired, remove hold
+                        if hold.has_expired():
                             self.librarian.remove_hold(hold, self.db)
                             # Log hold expiration
                             self.logger.log_event(
-                                f"Hold for {card.card_number} on book {hold.isbn} expired and was removed"
+                                f"Hold for {card.card_number} on book \"{self.db.lookup_book(hold.isbn).title}\" expired and was removed"
                             )
+
                 # Remove card from active cards if it has no loans or reserved holds
                 if card.loan_queue.is_empty() and \
-                    card.card_number not in self.db.reserved_holds:
+                        card.card_number not in self.db.reserved_holds:
                     self.db.active_cards.remove(card)
 
             # Log days events
+            self.logger.log_event("Day ended")
             self.logger.log_day_summary(self.clock.current_day)
 
-
+        # Generate end of simulation report
+        self.logger.log_end_of_simulation()
 
     def process_working_request(self):
         """
         Processes the current active request, whether it's a checkout or a pickup.
-        If the request is completed, it clears the working slot for the next request.
+        If the request is completed or fails, it clears the working slot.
         """
+        # Catch if a completed working request was passed in error
         if self.working_request.is_complete():
-            # If the current request is completed, clear the working_request
+            self.logger.log_event("Working request completed")
+            # If completed, cloar working request and end process
             self.working_request = None
-            return # End process here
-
+            return
+        # If working request is a checkout
         if isinstance(self.working_request, CheckoutRequest):
-            # Get a book from the current request,
+            # Get first book to check out
             book = self.working_request.scan_book()
-            # Checkout or place hold for this book
+            # Attempt to check out book and save attempt status (CHECKOUT or HOLD)
             status = self.librarian.checkout_book(self.working_request.library_card, book)
-            if status is "CHECKOUT": # If successful checkout
-                # Log checkout
-                self.logger.log_event(f"{self.working_request.library_card.card_number}"
-                                      f" checked out {book.title}")
-            elif status is "HOLD": # If hold was placed
-                self.logger.log_event(f"{self.working_request.library_card.card_number}"
-                                      f" placed a hold for {book.title}")
 
-        if isinstance(self.working_request, PickupRequest):
-            # Get hold associated with this
+            if status == "CHECKOUT":
+                # Log successful checkout
+                self.logger.log_checkout(self.working_request.library_card.card_number, book.title)
+            elif status == "HOLD":
+                # Log that a hold was placed instead
+                self.logger.log_hold(self.working_request.library_card.card_number, book.title)
+        # If working request is a hold pickup
+        elif isinstance(self.working_request, PickupRequest):
+            # Get first hold for pickup
             hold = self.working_request.fetch_hold()
-            # Pickup this hold
-            self.logger.log_event(f"{self.working_request.library_card.card_number} "
-                                  f"picking up {hold}")
-            print(self.db.reserved_holds)
-            self.librarian.pickup_book(hold, self.db)
-            # Log hold picked up
-            self.logger.log_event(f"{self.working_request.library_card.card_number} "
-                                  f"picked up {self.db.lookup_book(hold.isbn).title}")
-
+            # Catch scenario where the working request is holdover from previous day
+            # and hold has expired overnight
+            if hold.has_expired():
+                # Log expiration event
+                self.logger.log_event(f"Hold on \"{self.db.lookup_book(hold.isbn).title}\" expired overnight")
+            else:
+                # Pickup the hold
+                self.librarian.pickup_book(hold, self.db)
+                # Log pickup event
+                self.logger.log_pickup(self.working_request.library_card.card_number,
+                                       self.db.lookup_book(hold.isbn).title)
+        # Check if working request is now completed
         if self.working_request.is_complete():
-            # If the current request is completed, clear the working_request
+            # Log completion of request
+            self.logger.log_event("Working request completed")
+            # Clear working request
             self.working_request = None
 
     def generate_random_num_of_arrivals(self):
@@ -166,17 +181,20 @@ class Simulator:
 
         # Loop through list of patrons
         for patron in patrons:
+            # Log arrival time
+            self.logger.log_event(f"{patron.card_number} arrived at hour {self.clock.current_hour}")
             # Track that patron's card is active
             self.db.active_cards.add(patron)
             # If patron has reserved holds available for pickup
             if patron.card_number in self.db.reserved_holds and \
                     len(self.db.reserved_holds[patron.card_number]) > 0:
                 # Get list of holds
-                holds_to_pickup = self.db.reserved_holds[patron.card_number]
-                pickup_request = PickupRequest(patron, holds_to_pickup)
-
-                self.checkout_queue.enqueue(pickup_request)
-
+                holds_to_pickup = [
+                    hold for hold in self.db.reserved_holds.get(patron.card_number, [])
+                    if not hold.fulfilled and not hold.has_expired()
+                ]
+                if holds_to_pickup:
+                    self.checkout_queue.enqueue(PickupRequest(patron, holds_to_pickup))
             else:
                 # Generate a random number of books for patron to attempt to borrow
                 num_of_books = random.randint(1, 3)
@@ -187,5 +205,3 @@ class Simulator:
 
                 # Add the CheckoutRequest to the checkout_queue
                 self.checkout_queue.enqueue(checkout_request)
-
-    # TODO: Implement return of books at end of loan period

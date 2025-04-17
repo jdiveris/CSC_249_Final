@@ -48,7 +48,7 @@ class LibraryController:
 
         # Checkout book (Lookup library_card via hold info)
         self.checkout_book(mock_database.lookup_library_card(hold.card_number), book)
-        self.hold_checked_out(hold, mock_database.reserved_holds)
+        self.hold_checked_out(hold, mock_database)
 
     def place_hold(self, book, library_card):
         """
@@ -62,35 +62,40 @@ class LibraryController:
         book.hold_queue.enqueue(Hold(book.isbn, library_card.card_number))
         return "HOLD"
 
-    def hold_checked_out(self, hold, reserved_holds):
+    def hold_checked_out(self, hold, mock_database):
         """
         Cleanup method to mark hold as fulfilled and to remove items from the
         reserved_holds dictionary in the database if a given card has no more reserved holds
 
         Args:
             hold: (Hold) Hold obj that was just picked up
-            reserved_holds (dict): A dictionary mapping card numbers to lists of Hold objects.
-        """
+            mock_database (MockLibraryDb): The mock database containing book and hold records.        """
         hold.fulfilled = True
-        reserved_holds[hold.card_number].remove(hold)
-        # If there are no more reserved holds, remove the card number from reserved_holds
-        if not reserved_holds[hold.card_number]:
-            del reserved_holds[hold.card_number]
+        self.remove_hold(hold, mock_database)
 
     def remove_hold(self, hold, mock_database):
         """
-        Removes a hold from both the book's hold queue and the cardholder's reserved holds list.
+        Removes a hold from the cardholder's reserved holds list.
 
         Args:
             hold (Hold): The hold object to be removed.
             mock_database (MockLibraryDb): The mock database containing book and hold records.
         """
-        # # Lookup the book associated with the hold
-        # book = mock_database.lookup_book(hold.isbn)
-        # # Remove the hold from the book's hold queue
-        # book.hold_queue.remove(hold)
-        # Remove the hold from the reserved_holds list
-        mock_database.reserved_holds[hold.card_number].remove(hold)
+        # Check if the card_number exists in the reserved_holds database
+        if hold.card_number in mock_database.reserved_holds:
+            # Remove the hold from the list
+            mock_database.reserved_holds[hold.card_number].remove(hold)
+
+            # If the holds list is empty after removal, remove the card_number key entirely
+            if not mock_database.reserved_holds[hold.card_number]:
+                del mock_database.reserved_holds[hold.card_number]
+
+            # Add the copy back into available pool
+            mock_database.lookup_book(hold.isbn).available_copies += 1
+        else:
+            # Log a warning if the card_number key is missing
+            print(f"Warning: Attempted to remove hold for card '{hold.card_number}', but it does not exist.")
+
 
     def return_book(self, library_card, mock_database):
         """
@@ -107,6 +112,8 @@ class LibraryController:
         book = mock_database.lookup_book(loan.isbn)
         # Add the book to the library's returns_queue
         mock_database.returns_queue.enqueue(book)
+        # Return the book title to sim
+        return book.title
 
     def process_return(self, mock_database):
         """
@@ -136,7 +143,3 @@ class LibraryController:
         else: # If book has no holds
             # Increase the available copies for rental
             book.available_copies += 1
-
-
-    def check_for_available_holds(self):
-        pass
